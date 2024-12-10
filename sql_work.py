@@ -57,11 +57,10 @@ def update_quote(connection,cursor,new_quote,id):
 
    return f"Quote with id={id} not found", 404
 
-def delete_quote(connection,cursor,id):
+def delete_quote(cursor,id):
    cursor.execute('DELETE FROM quotes WHERE id = ?', (id,))
    row = cursor.rowcount
    if not cursor.rowcount==0:
-       connection.commit()
        return f"Quote with id {id} is deleted.", 200
    else:
        return f"Quote with id {id} not found", 200

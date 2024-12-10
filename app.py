@@ -65,7 +65,7 @@ def random():
 @app.route("/quotes/<int:id>", methods=['DELETE'])
 def delete(id):
    cursor = get_db().cursor()
-   data = sql_work.delete_quote(connection,cursor,id)
+   data = sql_work.delete_quote(cursor,id)
    return data
 
 if __name__ == "__main__":
