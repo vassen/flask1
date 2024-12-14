@@ -2,7 +2,7 @@ import random
 import json
 
 def list_qoutes(db,QuoteModel):
-    quotes = {}
+    quotes = []
     q = {}
     quote_all = db.session.scalars(db.select(QuoteModel)).all()
     for quote in quote_all:
@@ -11,8 +11,9 @@ def list_qoutes(db,QuoteModel):
         q['text']=quote.text
         q['ratind']=quote.rating
         quotes.append(q)
-    if quotes=={}:
-       quotes["error"] = "quotes is empty"
+    if quotes==[]:
+       q["error"] = "quotes is empty"
+       quotes.append(q)
        return quotes
     return quotes
 
