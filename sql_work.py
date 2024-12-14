@@ -13,7 +13,6 @@ def list_qoutes(db,QuoteModel):
         quotes.append(q)
     if quotes=={}:
        quotes["error"] = "quotes is empty"
-       print(quotes)
        return quotes
     return quotes
 
@@ -34,7 +33,6 @@ def get_quotes(db,QuoteModel,id):
 def create_quote(db,QuoteModel,quote_post):
     if quote_post.get("rating") == None or quote_post["rating"] is not range(1,6):
         quote_post["rating"] = 1
-    print(quote_post)
     quote = QuoteModel(quote_post['author'],quote_post['text'],quote_post['rating'])
     db.session.add(quote)
     db.session.commit()
