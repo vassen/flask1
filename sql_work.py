@@ -1,73 +1,71 @@
 import random
 
 
-def list_qoutes(cursor):
+def list_qoutes(db,QuoteModel):
     quotes = ""
-    cursor.execute('SELECT * FROM quotes')
-    data = cursor.fetchall()
-    for quote in data:
-        quotes += str(quote)
+    quote_all =db.session.scalars(db.select(QuoteModel)).all()
+    for quote in quote_all:
+        print(quote.author)
+        quotes += f"id = {quote.id}, author = {quote.author}, text= {quote.text}"
         quotes += "</br>"
     return quotes
 
 
-def random_quote(cursor):
-    ids = []
-    cursor.execute('SELECT id FROM quotes')
-    data = cursor.fetchall()
-    for id in data:
-        ids.append(id[0])
-    id = random.choice(ids)
-    cursor.execute('SELECT text FROM quotes WHERE id = ?', (id,))
-    data = cursor.fetchall()[0][0]
-    return data
 
-
-def get_quotes(cursor, id):
-    try:
-        cursor.execute(f'SELECT text FROM quotes where id={id}')
-        data = cursor.fetchone()
-        return data[0]
-    except:
+def get_quotes(db,QuoteModel,id):
+    data = db.session.get(QuoteModel, id)
+    if data is not None:
+        return data.text
+    else:
         return f"Quote with id={id} not found", 404
 
 
-def create_quote(cursor, quote):
-    if quote.get("rating") == None or quote["rating"] > 5 or quote["rating"] < 1:
-        quote["rating"] = 1
-    cursor.execute('SELECT max(id) FROM quotes')
-    last_id = cursor.fetchone()[0] + 1
-    cursor.execute('INSERT INTO quotes (id, author, text, rating) VALUES (?, ?, ?, ?)',
-                   (last_id, str(quote["author"]), str(quote["text"]), str(quote["rating"])))
+def create_quote(db,QuoteModel,quote_post):
+    if quote_post.get("rating") == None or quote_post["rating"] is not range(1,6):
+        quote_post["rating"] = 1
+    print(quote_post)
+    quote = QuoteModel(quote_post['author'],quote_post['text'],quote_post['rating'])
+    db.session.add(quote)
+    db.session.commit()
+    id = str(quote.id)
+    return f"add quote id = {id},</br>quotes = </br>{quote_post}"
 
 
-def count_quotes(cursor):
-    cursor.execute('SELECT count(id) FROM quotes')
-    data = cursor.fetchone()
-    return data
+def update_quote(db, QuoteModel, id, quote):
+    data = db.session.get(QuoteModel, id)
+    if data is not None:
+        q = db.session.get(QuoteModel, id)
+        print(q.id)
+        try:
+            if quote['author'] is not None:
+                q.author = quote['author']
+        except:
+            pass
+
+        try:
+            if quote['text'] is not None:
+                q.text = quote['text']
+        except:
+            pass
+        try:
+            if quote['rating'] is not None or quote['rating'] not in range(1,6):
+                q.text = quote['text']
+        except:
+            pass
+        db.session.add(q)
+        db.session.commit()
+    
+        return str(quote) + "</br> Edit completed", 200
+    else:
+        return f"id = {id} Not found", 200
 
 
-def update_quote(connection, cursor, new_quote, id):
-    sql_quote = {}
-    cursor.execute('SELECT * FROM quotes where id=?', (id,))
-    data = cursor.fetchall()[0]
-    if new_quote["rating"] > 5 or new_quote["rating"] < 1:
-        new_quote.pop("rating")
-    sql_quote["author"] = data[1]
-    sql_quote["text"] = data[2]
-    sql_quote["rating"] = data[3]
-    sql_quote.update(new_quote)
-    cursor.execute('UPDATE quotes set author = ?,text =?, rating = ? where id=? ',
-                   (str(sql_quote["author"]), str(sql_quote["text"]), sql_quote["rating"], id))
-    return sql_quote, 200
-
-    return f"Quote with id={id} not found", 404
-
-
-def delete_quote(cursor, id):
-    cursor.execute('DELETE FROM quotes WHERE id = ?', (id,))
-    row = cursor.rowcount
-    if not cursor.rowcount == 0:
+def delete_quote(db, QuoteModel, id):
+    data = db.session.get(QuoteModel, id)
+    if data is not None:
+        db.session.delete(data)
+        db.session.commit()
         return f"Quote with id {id} is deleted.", 200
     else:
-        return f"Quote with id {id} not found", 200
+        return f"Quote with id={id} not found", 404
+

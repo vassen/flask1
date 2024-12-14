@@ -4,77 +4,68 @@ from flask import g
 import sqlite3
 import sql_work
 from pathlib import Path
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String
 
-BASE_DIR = Path(__file__).parent
-DATABASE = BASE_DIR / "flask.db"
 
 
-def get_db():
-    db = getattr(g, '_database', None)
-    if db is None:
-        db = g._database = sqlite3.connect(DATABASE, autocommit=True)
-    return db
+class Base(DeclarativeBase):
+    pass
 
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
+BASE_DIR = Path(__file__).parent
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{BASE_DIR / 'quote_alchemy.db'}"
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(model_class=Base)
+db.init_app(app)
 
 
-@app.route("/")
-def hello_world():
-    return "Hello, World!"
 
+class QuoteModel(db.Model):
+    __tablename__ = 'quotes'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    author: Mapped[str] = mapped_column(String(32))
+    text: Mapped[str] = mapped_column(String(255))
+    rating: Mapped[int]
+
+    def __init__(self, author, text, rating):
+        self.author = author
+        self.text  = text
+        self.rating = rating
 
 @app.route("/quotes")
 def quotes_all():
-    cursor = get_db().cursor()
-    data = sql_work.list_qoutes(cursor)
+    data = sql_work.list_qoutes(db, QuoteModel)
     return data
 
 
 @app.route("/quotes/<int:id>")
 def quotes_(id):
-    cursor = get_db().cursor()
-    text = sql_work.get_quotes(cursor, id)
+    text = sql_work.get_quotes(db, QuoteModel, id)
     return text
 
 
 @app.route("/quotes", methods=['POST'])
 def create_quote():
-    cursor = get_db().cursor()
     quote = request.json
-    sql_work.create_quote(cursor, quote)
-    return quote, 201
+    data = sql_work.create_quote(db, QuoteModel, quote)
+    return data, 201
 
 
 @app.route("/quotes/<int:id>", methods=['PUT'])
 def update_quote(id):
-    cursor = get_db().cursor()
     quote = request.json
-    data = sql_work.update_quote(connection, cursor, quote, id)
+    data = sql_work.update_quote(db, QuoteModel, id, quote)
     return data
-
-
-@app.route("/quotes/count")
-def count_quote():
-    cursor = get_db().cursor()
-    lenght = sql_work.count_quotes(cursor)
-    count = {"count": lenght}
-    return count
-
-
-@app.route("/quotes/random")
-def random():
-    cursor = get_db().cursor()
-    data = sql_work.random_quote(cursor)
-    print("data", data)
-    return data
-
 
 @app.route("/quotes/<int:id>", methods=['DELETE'])
 def delete(id):
-    cursor = get_db().cursor()
-    data = sql_work.delete_quote(cursor, id)
+    data = sql_work.delete_quote(db, QuoteModel, id)
     return data
 
 
